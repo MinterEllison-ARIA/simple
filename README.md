@@ -42,10 +42,13 @@ graph.display()
 A collection of convenience functions which make it easy to test any kind of code, although developed for the purpose of testing agents.
 
 ```` python
-@expect("Hello Jonathon! How can I help you", Prompts.semantic_compare)
-def test_greeting():
-  response = Tests.sample_graph.invoke({"input": "Good morning. I'm Jonathon."})['response']
-  confirm(response, "The response contains the name Jonathon.")
-  confirm(response, "The response is a greeting.")
-  return response
+class Test
+  @expect("Hello Jonathon! How can I help you", Prompts.semantic_compare)
+  def test_greeting():
+    response = Tests.sample_graph.invoke({"input": "Good morning. I'm Jonathon."})['response']
+    confirm(response, "The response contains the name Jonathon.")
+    confirm(response, "The response is a greeting.")
+    return response
+
+SimpleGraph.test(Test)
 ````
