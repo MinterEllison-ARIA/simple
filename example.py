@@ -1,4 +1,5 @@
 # simulate convenience imports
+from simple import SimpleGraph
 classify, extract, prompt, after, expect, confirm = SimpleGraph.helpers()
 
 class State(TypedDict):
