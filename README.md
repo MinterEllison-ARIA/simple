@@ -5,7 +5,7 @@ A single class intended to make it easy to develop AI agents. Based on Marvin an
 ## @prompt, classify, extract, 
 A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM.
 
-````
+```` python
 @prompt
 def paraphrase(input:str) -> str:
   '''
