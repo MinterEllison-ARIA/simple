@@ -21,6 +21,11 @@ def classify_and_extract(input):
 A collection of convenience functions which make it easy to define and visualise state machine based agents using Langgraph.
 
 ```` python
+class State(TypedDict):
+
+    input: str
+    action: str
+
 class Nodes:
 
     @after('start')
