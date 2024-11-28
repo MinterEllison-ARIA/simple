@@ -19,7 +19,7 @@ def others():
 ## @after, graph, display
 A collection of convenience functions which make it easy to define and visualise state machine based agents using Langgraph.
 
-````
+```` python
 class Nodes:
 
     @after('start')
@@ -32,7 +32,7 @@ class Nodes:
 ## @expect, confirm, test
 A collection of convenience functions which make it easy to test any kind of code, although developed for the purpose of testing agents.
 
-````
+```` python
 @expect("Hello Jonathon! How can I help you", Prompts.semantic_compare)
 def test_greeting():
   response = Tests.sample_graph.invoke({"input": "Good morning. I'm Jonathon."})['response']
