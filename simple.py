@@ -32,7 +32,6 @@ class SimpleGraph:
       return decorator
 
     def graph(node, state, compile=True):
-        from langgraph.graph import StateGraph, START, END
 
         # Create empty graph with state type
         workflow = StateGraph(state)
