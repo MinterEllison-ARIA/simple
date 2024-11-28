@@ -11,6 +11,7 @@ def paraphrase(input:str) -> str:
   '''
   Rewrites the input string to have the same semantic content but a more creative and upbeat tone.
   '''
+
 def classify_and_extract(input):
   action = classify(input, labels=['answer', 'greeting'])
   name = extract(input, str | None, "The name of the person who wrote the message")[0]
