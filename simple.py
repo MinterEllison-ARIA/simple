@@ -105,8 +105,4 @@ class SimpleGraph:
                   })
 
       # Create a dataframe from the results
-      df = pd.DataFrame(results)
-      return df
-
-# simulate convenience imports
-classify, extract, prompt, after, expect, confirm = SimpleGraph.helpers()
+      return pd.DataFrame(results)
