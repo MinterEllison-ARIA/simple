@@ -61,12 +61,12 @@ class SimpleGraph:
         result.display = lambda : SimpleGraph.display(result)
         return result
 
-    def expect(expected_value, comparator=None):
+    def expect(expected_value=None, comparator="DEFAULT"):
       def decorator(func):
           # Add a 'test' property to the function
           def test():
               actual_value = func()
-              result = (actual_value == expected_value) if comparator == None else comparator(actual_value, expected_value) #todo: add try/catch
+              result = (actual_value == expected_value) if comparator == "DEFAULT" else comparator(actual_value, expected_value)
               return {'Test Name': func.__name__, 'Test Result': result, 'Expected': expected_value, 'Actual': actual_value}
 
           # Attach the 'test' function as a property of the decorated function
