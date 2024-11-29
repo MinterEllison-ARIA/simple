@@ -52,7 +52,7 @@ class Nodes:
 
 class Tests:
 
-    sample_graph = SimpleGraph.graph(Nodes, State).display()
+    sample_graph = SimpleGraph.graph(Nodes, State)
 
     @expect('The answer is always 42')
     def test_answer():
@@ -65,4 +65,5 @@ class Tests:
       confirm(response, "The response is a greeting")
       return response
 
-SimpleGraph.test(Tests)
+SimpleGraph.test(Tests, display_only=True)
+Tests.sample_graph.display()
