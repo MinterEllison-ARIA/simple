@@ -35,6 +35,8 @@ class Nodes:
         state['action'] = classify(input, labels=['answer', 'greeting'])
         return state
 
+    # define additional graph nodes (see example.py)
+
 graph = SimpleGraph.graph(Nodes, State) # Generates a runnable langgraph-based agent with full streaming and debugging support
 graph.display()
 ````
