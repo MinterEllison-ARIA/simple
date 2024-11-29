@@ -75,34 +75,45 @@ class SimpleGraph:
 
       return decorator
 
-    def test(cls):
-      # List to store test results
-      results = []
+    def test(cls, display_only=False):
+        # List to store test results
+        results = []
 
-      # Iterate over all attributes of the class
-      for attr_name in dir(cls):
-          attr = getattr(cls, attr_name)
-          # Check if the attribute is a function and has a 'test' method
-          if callable(attr) and hasattr(attr, 'test'):
-              # Call the 'test' method to get test results
-              try:
-                  test_result = attr.test()
-                  results.append({
-                      'Test Name': test_result['Test Name'].replace("_", " ").title(),
-                      'Test Status': 'Pass' if test_result['Test Result'] else 'Fail',
-                      'Expected Value': test_result['Expected'],
-                      'Actual Value': test_result['Actual'],
-                      'Exception': None,
-                  })
-              except Exception as e:
-                  # Append result if test execution fails
-                  results.append({
-                      'Test Name': attr_name.replace("_", " ").title(),
-                      'Test Status': 'Fail',
-                      'Expected Value': 'N/A',
-                      'Actual Value': 'N/A',
-                      'Exception': str(e),
-                  })
+        # Create an empty dataframe for initial display
+        df = pd.DataFrame(columns=['Test Name', 'Test Status', 'Expected Value', 'Actual Value', 'Exception'])
 
-      # Create a dataframe from the results
-      return pd.DataFrame(results)
+        # Display the dataframe initially
+        if display_only==True: display_handle = display(df, display_id=True)
+
+        # Iterate over all attributes of the class
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            # Check if the attribute is a function and has a 'test' method
+            if callable(attr) and hasattr(attr, 'test'):
+                try:
+                    # Call the 'test' method to get test results
+                    test_result = attr.test()
+                    results.append({
+                        'Test Name': test_result['Test Name'].replace("_", " ").title(),
+                        'Test Status': 'Pass' if test_result['Test Result'] else 'Fail',
+                        'Expected Value': test_result['Expected'],
+                        'Actual Value': test_result['Actual'],
+                        'Exception': None,
+                    })
+                except Exception as e:
+                    # Append result if test execution fails
+                    results.append({
+                        'Test Name': attr_name.replace("_", " ").title(),
+                        'Test Status': 'Fail',
+                        'Expected Value': 'N/A',
+                        'Actual Value': 'N/A',
+                        'Exception': str(e),
+                    })
+
+                # Update the dataframe with the current results
+                df = pd.DataFrame(results)
+                clear_output(wait=True)
+                if display_only: display_handle.update(df)
+
+        # Return the final dataframe
+        if not display_only: return pd.DataFrame(results)
