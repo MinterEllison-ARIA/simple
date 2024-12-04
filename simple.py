@@ -2,23 +2,55 @@ from typing import Dict, TypedDict, Optional, Callable, Annotated
 from langgraph.graph import StateGraph, START, END
 import marvin
 import pandas as pd
+from pydantic import BaseModel, ValidationError
+import textwrap
+import json_repair
 
 class SimpleGraph:
 
-    classify = marvin.classify
-    extract = marvin.extract
-    prompt = marvin.fn
+    classify = marvin.classify # A helper function which allows you to classify data based on the provided labels
+    prompt = marvin.fn # A decorator function which allows you to define string generator function using only docstring
+    multi = type("Pipeable", (object,), {"__init__": lambda self: None, "__or__": lambda self, other: textwrap.dedent(other).strip()})() # example_str = multi | """this is a multiline string that needs indentation fixed"""
+
+    def schema(template: BaseModel):
+      """Returns a sting representation of the pydantic model schema, suitable for inclusion within prompt."""
+      schema, lines = template.schema(), []
+      for name, info in schema['properties'].items():
+          desc, constraints = info.get('description', 'No description.'), []
+          if 'enum' in info: constraints.append(f"Values: {', '.join(map(str, info['enum']))}")
+          if 'exclusiveMinimum' in info: constraints.append(f"> {info['exclusiveMinimum']}")
+          if 'maximum' in info: constraints.append(f"≤ {info['maximum']}")
+          if 'format' in info: constraints.append(info['format'])
+          line = f"{name}: {desc}" + (f" ({', '.join(constraints)})" if constraints else "")
+          lines.append(line)
+      return  "\n".join(lines)
+
+    def extract(text, template=None, instructions=None, json=False, validate=True):
+      """Extracts data from text. Returns tuple with the extracted data and a list of errors."""
+      if not json:
+        return marvin.extract(text, target=template, instructions=instructions), None
+      else:
+        parsed_json = json_repair.loads(text)
+        if not parsed_json: return None, [(template.__name__, f"No suitable data found.")]  # No data extracted
+        else:
+          if not validate: return [parsed_json], None
+          else:
+            try: return template.parse_obj(parsed_json), None
+            except ValidationError as ve:
+              return parsed_json, str([(e['loc'][0], e['msg']) if e['loc'] else (template.__name__, f"No suitable data found.") for e in ve.errors()])
 
     @classmethod
     def helpers(cls):
-      return cls.classify, cls.extract, cls.prompt, cls.after, cls.expect, cls.confirm
+      """Returns the list of helper functions available within this class"""
+      return cls.classify, cls.extract, cls.prompt, cls.after, cls.expect, cls.confirm, cls.multi, cls.schema
 
     def confirm(response: str, truth: str) -> bool:
+      """ A decorator used to define tests within a test class """
       assert classify(response, [True, False], instructions=f"Return true if {truth}"), f'The statement "{truth}" is not true. The response evaluated was "{response}".'
 
     def display(self):
+        """Displays the graph as a mermaid diagram."""
         from IPython.display import Image, display
-        #return Image(app.get_graph(xray=True).draw_mermaid_png())
         if 'get_graph' in dir(self):
           display(Image(self.get_graph(xray=True).draw_mermaid_png()))
         else:
@@ -26,12 +58,14 @@ class SimpleGraph:
         return self
 
     def after(*edges):
+      """ A decorator used to define a graph node within a graph definition class """
       def decorator(func: Callable):
           func._edges = edges
           return staticmethod(func)
       return decorator
 
     def graph(node, state, compile=True):
+        """ A helper function which generates a runnable langgraph graph based on a graph definition class """
 
         # Create empty graph with state type
         workflow = StateGraph(state)
@@ -62,6 +96,7 @@ class SimpleGraph:
         return result
 
     def expect(expected_value, comparator="DEFAULT"):
+      """ A decorator used to define tests within a test class """
       def decorator(func):
           # Add a 'test' property to the function
           def test():
@@ -76,6 +111,7 @@ class SimpleGraph:
       return decorator
 
     def test(cls, display_only=False):
+        """ A helper function which runs all of the tests within a test class """
         # List to store test results
         results = []
 
@@ -112,7 +148,7 @@ class SimpleGraph:
 
                 # Update the dataframe with the current results
                 df = pd.DataFrame(results)
-                clear_output(wait=True)
+                # clear_output(wait=True)
                 if display_only: display_handle.update(df)
 
         # Return the final dataframe
