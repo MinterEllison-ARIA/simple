@@ -1,0 +1,2 @@
+class SimpleAgent:
+    pass
