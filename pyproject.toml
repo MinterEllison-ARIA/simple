@@ -9,8 +9,10 @@ description = "A simple Python project for the Simple class"
 authors = [
     { name = "Your Name", email = "your_email@example.com" }
 ]
-license = "MIT"
 dependencies = [
     "langgraph",
     "marvin"
 ]
+
+[project.license]
+text = "None"
