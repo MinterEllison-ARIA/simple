@@ -46,7 +46,7 @@ class SimpleGraph:
 
     def confirm(response: str, truth: str) -> bool:
       """ A decorator used to define tests within a test class """
-      assert classify(response, [True, False], instructions=f"Return true if {truth}"), f'The statement "{truth}" is not true. The response evaluated was "{response}".'
+      assert marvin.classify(response, [True, False], instructions=f"Return true if {truth}"), f'The statement "{truth}" is not true. The response evaluated was "{response}".'
 
     def display(self):
         """Displays the graph as a mermaid diagram."""
