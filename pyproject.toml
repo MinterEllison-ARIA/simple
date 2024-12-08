@@ -11,7 +11,9 @@ authors = [
 ]
 dependencies = [
     "langgraph",
-    "marvin"
+    "marvin",
+    "json_repair",
+    "pandas"
 ]
 
 [project.license]
