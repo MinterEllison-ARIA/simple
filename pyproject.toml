@@ -13,7 +13,9 @@ dependencies = [
     "langgraph",
     "marvin",
     "json_repair",
-    "pandas"
+    "pandas",
+    "jinja2",
+    "pydantic"
 ]
 
 [project.license]
