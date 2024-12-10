@@ -2,8 +2,8 @@
 A set of classes intended to make it easy to develop AI agents. Based on Marvin and Langgraph.
 # Features
 
-## @tool, classify, extract
-A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM. If provided with access to one or more local functions, tools will use those functions to complete their task.
+## @tool, @assistant, classify, extract
+A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM. Assistants are similar to tools except that they can make use of subtools while completing their tasks.
 
 ```` python
 @tool
