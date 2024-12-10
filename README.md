@@ -1,12 +1,12 @@
 # Introduction
-A single class intended to make it easy to develop AI agents. Based on Marvin and Langgraph.
+A set of classes intended to make it easy to develop AI agents. Based on Marvin and Langgraph.
 # Features
 
-## @prompt, classify, extract, 
-A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM.
+## @tool, classify, extract, multi
+A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM. The @tool decorator can accept subtools.
 
 ```` python
-@prompt
+@tool
 def paraphrase(input:str) -> str:
   '''
   Rewrites the input string to have the same semantic content but a more creative and upbeat tone.
