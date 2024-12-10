@@ -1,6 +1,7 @@
-# simulate convenience imports
-from simple import SimpleGraph
-classify, extract, prompt, after, expect, confirm = SimpleGraph.helpers()
+from simple import SimpleGraph, SimpleAgent, SimpleTest
+multi, extract, tool, classify = (SimpleAgent.multi, SimpleAgent.extract, SimpleAgent.tool, SimpleAgent.classify)
+graph, after = (SimpleGraph.graph, SimpleGraph.after)
+test, expect, confirm = (SimpleTest.test, SimpleTest.expect, SimpleTest.confirm)
 
 class State(TypedDict):
 
@@ -8,15 +9,15 @@ class State(TypedDict):
     action: str
     response: str
 
-class Prompts:
+class Tools:
 
-    @prompt
+    @tool
     def paraphrase(input:str) -> str:
       '''
       Rewrites the input string to have the same semantic content but a more creative and upbeat tone.
       '''
 
-    @prompt
+    @tool
     def semantic_compare(statement1: str, statement2: str) -> bool:
       '''
       Returns a boolean indicating whether the two input statements are similar in terms of when they might be uttered in a conversation,
