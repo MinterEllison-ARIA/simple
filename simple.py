@@ -158,7 +158,6 @@ class SimpleAgent:
             except ValidationError as ve:
               return parsed_json, str([(e['loc'][0], e['msg']) if e['loc'] else (template.__name__, f"No suitable data found.") for e in ve.errors()])
 
-
     def tool(*args, llm = None, subtools = [], **kwargs) -> Callable:
         """ 
         Decorator which generates agents from docstrings. 
@@ -273,3 +272,5 @@ class SimpleAgent:
 
           The output is
       """
+
+SimpleAgent.assistant = SimpleAgent.tool
