@@ -18,7 +18,7 @@ def classify_and_extract(input):
   return action, name
 ````
 
-## @after, graph, display
+## @after, graph
 A collection of convenience functions which make it easy to define and visualise state machine based agents using Langgraph.
 
 ```` python
