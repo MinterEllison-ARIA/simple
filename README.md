@@ -38,7 +38,6 @@ class Nodes:
     # define additional graph nodes (see example.py)
 
 graph = SimpleGraph.graph(Nodes, State) # Generates a runnable langgraph-based agent with full streaming and debugging support
-graph.display()
 ````
 
 ## @expect, confirm, test
@@ -54,5 +53,5 @@ class Test
       confirm(response, "The response is a greeting.")
       return response
 
-SimpleGraph.test(Test)
+SimpleTest.test(Test)
 ````
