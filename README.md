@@ -3,7 +3,7 @@ A set of classes intended to make it easy to develop AI agents. Based on Marvin 
 # Features
 
 ## @tool, classify, extract
-A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM. The @tool decorator can accept subtools.
+A collection of convenience functions which make it easy to generate text, classify text, and extract data from text, using an LLM.
 
 ```` python
 @tool
