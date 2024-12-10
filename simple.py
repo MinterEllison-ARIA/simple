@@ -1,54 +1,9 @@
-from typing import Dict, TypedDict, Optional, Callable, Annotated
+
 from langgraph.graph import StateGraph, START, END
-import marvin
-import pandas as pd
-from pydantic import BaseModel, ValidationError
-import textwrap
-import json_repair
 
 class SimpleGraph:
 
-    classify = marvin.classify # A helper function which allows you to classify data based on the provided labels
-    prompt = marvin.fn # A decorator function which allows you to define string generator function using only docstring
-    multi = type("Pipeable", (object,), {"__init__": lambda self: None, "__or__": lambda self, other: textwrap.dedent(other).strip()})() # example_str = multi | """this is a multiline string that needs indentation fixed"""
-
-    def schema(template: BaseModel):
-      """Returns a sting representation of the pydantic model schema, suitable for inclusion within prompt."""
-      schema, lines = template.schema(), []
-      for name, info in schema['properties'].items():
-          desc, constraints = info.get('description', 'No description.'), []
-          if 'enum' in info: constraints.append(f"Values: {', '.join(map(str, info['enum']))}")
-          if 'exclusiveMinimum' in info: constraints.append(f"> {info['exclusiveMinimum']}")
-          if 'maximum' in info: constraints.append(f"≤ {info['maximum']}")
-          if 'format' in info: constraints.append(info['format'])
-          line = f"{name}: {desc}" + (f" ({', '.join(constraints)})" if constraints else "")
-          lines.append(line)
-      return  "\n".join(lines)
-
-    def extract(text, template=None, instructions=None, json=False, validate=True):
-      """Extracts data from text. Returns tuple with the extracted data and a list of errors."""
-      if not json:
-        return marvin.extract(text, target=template, instructions=instructions), None
-      else:
-        parsed_json = json_repair.loads(text)
-        if not parsed_json: return None, [(template.__name__, f"No suitable data found.")]  # No data extracted
-        else:
-          if not validate: return [parsed_json], None
-          else:
-            try: return template.parse_obj(parsed_json), None
-            except ValidationError as ve:
-              return parsed_json, str([(e['loc'][0], e['msg']) if e['loc'] else (template.__name__, f"No suitable data found.") for e in ve.errors()])
-
-    @classmethod
-    def helpers(cls):
-      """Returns the list of helper functions available within this class"""
-      return cls.classify, cls.extract, cls.prompt, cls.after, cls.expect, cls.confirm, cls.multi, cls.schema
-
-    def confirm(response: str, truth: str) -> bool:
-      """ A decorator used to define tests within a test class """
-      assert marvin.classify(response, [True, False], instructions=f"Return true if {truth}"), f'The statement "{truth}" is not true. The response evaluated was "{response}".'
-
-    def display(self):
+    def _display(self):
         """Displays the graph as a mermaid diagram."""
         from IPython.display import Image, display
         if 'get_graph' in dir(self):
@@ -60,7 +15,8 @@ class SimpleGraph:
     def after(*edges):
       """ A decorator used to define a graph node within a graph definition class """
       def decorator(func: Callable):
-          func._edges = edges
+          str_edges = [edge.__name__ if isinstance(edge, Callable) else ('start' if edge == None else edge) for edge in edges] if edges else ['start']
+          func._edges = str_edges
           return staticmethod(func)
       return decorator
 
@@ -92,8 +48,13 @@ class SimpleGraph:
 
         # Compile the workflow into a runnable and check for errors
         result = workflow.compile() if compile else workflow
-        result.display = lambda : SimpleGraph.display(result)
+        result.display = lambda : SimpleGraph._display(result)
         return result
+
+import marvin
+import pandas as pd
+
+class SimpleTest:
 
     def expect(expected_value, comparator="DEFAULT"):
       """ A decorator used to define tests within a test class """
@@ -109,6 +70,11 @@ class SimpleGraph:
           return func
 
       return decorator
+
+    def confirm(response: str, truth: str) -> bool:
+      """ A decorator used to define tests within a test class """
+      assert marvin.classify(response, [True, False], instructions=f"Return true if {truth}"), f'The statement "{truth}" is not true. The response evaluated was "{response}".'
+      return True
 
     def test(cls, display_only=False):
         """ A helper function which runs all of the tests within a test class """
@@ -153,3 +119,177 @@ class SimpleGraph:
 
         # Return the final dataframe
         if not display_only: return pd.DataFrame(results)
+
+
+import inspect
+import textwrap
+import re
+import marvin
+import json_repair
+
+from typing import Any, Dict, Literal, Optional, Callable, TypedDict, Annotated
+from pydantic import BaseModel, ValidationError
+from enum import Enum
+from functools import wraps, partial
+from jinja2 import Template
+from marvin.utilities.pydantic import cast_type_or_alias_to_model
+from langchain.output_parsers import PydanticOutputParser
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.chat_agent_executor import AgentState
+from enum import Enum
+
+import inspect
+import textwrap
+import re
+import marvin
+import json_repair
+
+from typing import Any, Dict, Literal, Optional, Callable, TypedDict, Annotated
+from pydantic import BaseModel, ValidationError
+from enum import Enum
+from functools import wraps, partial
+from jinja2 import Template
+from marvin.utilities.pydantic import cast_type_or_alias_to_model
+from langchain.output_parsers import PydanticOutputParser
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt.chat_agent_executor import AgentState
+from enum import Enum
+
+class SimpleAgent:
+
+    multi = type("Pipeable", (object,), {"__init__": lambda self: None, "__or__": lambda self, other: textwrap.dedent(other).strip()})() # example_str = multi | """this is a multiline string that needs indentation fixed"""
+    classify = marvin.classify # A helper function which allows you to classify data based on the provided labels
+
+    def extract(text=None, template=None, instructions=None, assume_json_input=False, validate_template=True):
+      """Extracts data from text. Returns tuple with the extracted data plus a list of validation errors if validation fails."""
+      if not assume_json_input:
+        return marvin.extract(text, target=template, instructions=instructions), None
+      else:
+        parsed_json = json_repair.loads(text)
+        if not parsed_json: return None, [(template.__name__, f"No suitable data found.")]  # No data extracted
+        else:
+          if not validate_template: return [parsed_json], None
+          else:
+            try: return template.parse_obj(parsed_json), None
+            except ValidationError as ve:
+              return parsed_json, str([(e['loc'][0], e['msg']) if e['loc'] else (template.__name__, f"No suitable data found.") for e in ve.errors()])
+
+
+    def tool(*args, llm = None, subtools = [], **kwargs) -> Callable:
+        """ 
+        Decorator which generates agents from docstrings. 
+        Accepts functions as inputs which become subtools. 
+        Can also be used to mark a normal python function as suitable for use as a subtool 
+        """
+        
+        has_function_body = SimpleAgent._has_function_body
+        first_arg = args[0] if args else None
+
+        if len(args) == 1 and not hasattr(first_arg, '__is_tool__'):
+            if has_function_body(first_arg):
+                first_arg.__is_tool__ = True
+                return first_arg
+            return SimpleAgent._create_function_agent(first_arg, llm=llm)
+
+        def decorator(func):
+            if has_function_body(func):
+                func.__is_tool__ = True
+                return func
+            tools = [arg for arg in args if callable(arg)]
+            for tool in tools:
+                if not inspect.getdoc(tool):
+                    tool.__doc__ = f"Does what the function name ({tool.__name__}) suggests."
+            return SimpleAgent._create_function_agent(func, llm=llm, tools=tools + subtools)
+        return decorator
+
+    def _has_function_body(func) -> bool: 
+      func_source, func_doc = inspect.getsource(func), func.__doc__ if func.__doc__ else ""
+      after_doc_index = func_source.find(func_doc) + len(func_doc)
+      return bool(re.search(r'[^\s\'"]', func_source[after_doc_index:]))
+
+    @staticmethod
+    def _create_function_agent(func: Callable, llm=None, tools=None, debug=False):
+
+        # set defaults
+        llm = llm if llm else ChatOpenAI(model="gpt-4o-mini")
+        tools = tools if tools else []
+
+        # generate a pydantic class representing the return signature
+        return_type = inspect.signature(func).return_annotation
+        return_type_imputed = \
+            str if isinstance(return_type, (str, type(None))) or return_type is inspect.Signature.empty \
+            else Enum("Labels", {"v" + str(i): label for i, label in enumerate(return_type)}) if isinstance(return_type, list) \
+            else return_type
+        return_type_pydantic = cast_type_or_alias_to_model(return_type_imputed)
+        parser = PydanticOutputParser(pydantic_object=return_type_pydantic)
+        format_instructions = parser.get_format_instructions()
+        function_definition = f'def {func.__name__}{str(inspect.signature(func))})\n"""\n{inspect.getdoc(func)}\n"""'
+        agent_schema = type("agent_schema", (AgentState,), {"__annotations__": {"input": dict, "output": return_type_pydantic}})
+
+        def append_function_inputs(state: AgentState):
+            function_inputs = state['input']
+            function_definition_renderered = Template(function_definition).render(function_inputs=function_inputs) if function_inputs else function_definition
+            system_message_template = ChatPromptTemplate.from_messages(
+                [("system", Template(SimpleAgent.tool.SYSTEM_PROMPT_TEMPLATE).render(function_definition=function_definition_renderered)),
+                ("placeholder", "{messages}")])
+            system_messages = system_message_template.invoke({"messages": state["messages"]}).to_messages()
+            user_message = [("user", Template(SimpleAgent.tool.MESSAGE_PROMPT_TEMPLATE).render(function_inputs=state['input'], format_instructions=format_instructions))]
+            return system_messages + user_message
+
+        class Proxy:
+          def __init__(self, target): 
+            self._target = target
+            self.__doc__ = f"A tool proxy for the function '{func.__name__}'.\n\nFurther details:\n{func.__doc__ or 'None'}"
+          def __getattr__(self, name): return getattr(self._target, name)
+          def __call__(self, *args: Any, **kwds: Any) -> Any:
+            mapped_inputs = dict(inspect.signature(func).bind(*args,**kwds).apply_defaults() or inspect.signature(func).bind(*args,**kwds).arguments)
+            response_messages = self._target.invoke({'input': mapped_inputs if mapped_inputs else  None})
+            str_result = response_messages["messages"][-1].content
+            return parser.parse(str_result).output
+
+        tool_agent = create_react_agent(llm, tools, state_schema=agent_schema, state_modifier=append_function_inputs, debug=debug)
+        return Proxy(tool_agent)
+
+    # Define the Jinja2 templates for @tool
+    tool.SYSTEM_PROMPT_TEMPLATE = multi | """
+        Your job is to generate likely outputs for a Python function with the
+        following definition:
+
+        {{ function_definition }}
+
+        The user will provide function inputs (if any) and you must respond with
+        the most likely result.
+
+        e.g. `list_fruits(n: int) -> list[str]` (3) -> "apple", "banana", "cherry"
+    """
+
+    tool.MESSAGE_PROMPT_TEMPLATE = multi | """
+          ## Function inputs
+
+          {% if function_inputs -%}
+          The function was called with the following inputs:
+          {% for arg, value in function_inputs.items() %}
+          - {{ arg }}: {{ value }}
+          {% endfor %}
+          {% else %}
+          The function was not called with any inputs.
+          {% endif %}
+
+          {% if format_instructions -%}
+          ## Additional Context
+
+          I also preprocessed some of the data and have this additional context for you to consider:
+
+          {{ format_instructions }}
+          {% endif %}
+
+          What is the function's output?
+
+          |ASSISTANT|
+
+          The output is
+      """
