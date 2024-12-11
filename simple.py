@@ -3,6 +3,9 @@ from langgraph.graph import StateGraph, START, END
 
 class SimpleGraph:
 
+    START = langgraph.graph.START
+    END = langgraph.graph.END
+
     def _display(self):
         """Displays the graph as a mermaid diagram."""
         from IPython.display import Image, display
