@@ -275,5 +275,3 @@ class SimpleAgent:
 
           The output is
       """
-
-SimpleAgent.assistant = SimpleAgent.tool
