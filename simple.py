@@ -158,34 +158,34 @@ class SimpleAgent:
             except ValidationError as ve:
               return parsed_json, str([(e['loc'][0], e['msg']) if e['loc'] else (template.__name__, f"No suitable data found.") for e in ve.errors()])
 
-    def tool(*args, llm = None, subtools = [], **kwargs) -> Callable:
-        """ 
-        Decorator which generates agents from docstrings. 
-        Accepts functions as inputs which become subtools. 
-        Can also be used to mark a normal python function as suitable for use as a subtool 
-        """
-        
-        has_function_body = SimpleAgent._has_function_body
-        first_arg = args[0] if args else None
-
-        if len(args) == 1 and not hasattr(first_arg, '__is_tool__'):
-            if has_function_body(first_arg):
-                first_arg.__is_tool__ = True
-                return first_arg
-            return SimpleAgent._create_function_agent(first_arg, llm=llm)
-
-        def decorator(func):
-            if has_function_body(func):
-                func.__is_tool__ = True
-                return func
+    def assistant(*args, llm=None, debug=False):
+        def decorator(func, *fargs, **fkwargs):
             tools = [arg for arg in args if callable(arg)]
-            for tool in tools:
-                if not inspect.getdoc(tool):
-                    tool.__doc__ = f"Does what the function name ({tool.__name__}) suggests."
-            return SimpleAgent._create_function_agent(func, llm=llm, tools=tools + subtools)
+            agent = SimpleAgent._create_function_agent(func, llm=llm, tools=tools, debug=debug)
+            return agent
         return decorator
 
-    def _has_function_body(func) -> bool: 
+    def tool(*args, llm=None, debug=False):
+        called_without_parentheses = len(args) == 1 and callable(args[0]) and llm is None and debug is False
+
+        def decorator(func):
+            if SimpleAgent._has_function_body(func):
+                func.__doc__ = func.__doc__ if inspect.getdoc(func) else f"Does what the function name (s{func.__name__}) suggests."
+                return func
+            else:
+                return SimpleAgent._create_function_agent(func, llm=llm, debug=debug)
+                wrapper.__name__ = func.__name__
+                wrapper.__doc__ = inspect.getdoc(func)
+                return wrapper
+
+        if called_without_parentheses:
+            func = args[0]
+            return decorator(func)
+
+        elif len(args) == 0:
+            return decorator
+
+    def _has_function_body(func) -> bool:
       func_source, func_doc = inspect.getsource(func), func.__doc__ if func.__doc__ else ""
       after_doc_index = func_source.find(func_doc) + len(func_doc)
       return bool(re.search(r'[^\s\'"]', func_source[after_doc_index:]))
@@ -219,10 +219,13 @@ class SimpleAgent:
             user_message = [("user", Template(SimpleAgent.tool.MESSAGE_PROMPT_TEMPLATE).render(function_inputs=state['input'], format_instructions=format_instructions))]
             return system_messages + user_message
 
-        class Proxy:
-          def __init__(self, target): 
+        class Proxy(Callable):
+          def __init__(self, target):
             self._target = target
-            self.__doc__ = f"A tool proxy for the function '{func.__name__}'.\n\nFurther details:\n{func.__doc__ or 'None'}"
+            self.__doc__ = f"A tool proxy for the function '{func.__name__}'." if not func.__doc__ else inspect.getdoc(func)
+            self.__name__ = func.__name__
+            self.__qualname__ = func.__qualname__
+            self.__signature__ = inspect.signature(func)
           def __getattr__(self, name): return getattr(self._target, name)
           def __call__(self, *args: Any, **kwds: Any) -> Any:
             mapped_inputs = dict(inspect.signature(func).bind(*args,**kwds).apply_defaults() or inspect.signature(func).bind(*args,**kwds).arguments)
