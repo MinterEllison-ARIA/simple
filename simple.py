@@ -275,3 +275,98 @@ class SimpleAgent:
 
           The output is
       """
+
+from pydantic import BaseModel, Field
+from typing import Any, List, Dict, Type, Union
+from anytree import Node, RenderTree
+
+class SimpleMisc:
+    
+    # Define ANSI escape codes for colors
+    RESET = "\033[0m"
+    SILVER = "\033[90m"  # Light gray or silver
+    BLUE = "\033[94m"    # Bright blue
+    GREEN = "\033[92m"   # Bright green
+    
+    def display_state(instance_or_type: Union[BaseModel, Type[BaseModel]], name: str = "Root") -> None:
+        """
+        Display the structure and state of a Pydantic instance or type as a tree.
+    
+        Args:
+            instance_or_type (Union[BaseModel, Type[BaseModel]]): The Pydantic instance or type to visualize.
+            name (str): Name for the root node of the tree.
+    
+        Returns:
+            None: Prints the tree structure.
+        """
+        def build_tree_from_type(node: Node, model_cls: Type[BaseModel]) -> None:
+            for field_name, field in model_cls.__annotations__.items():
+                # Get the field type and description
+                field_info = model_cls.model_fields.get(field_name)
+                field_type = field_info.annotation if field_info else field
+                field_description = field_info.description if field_info and hasattr(field_info, 'description') else ""
+                field_name_formatted = field_name.upper() if hasattr(field_type, 'model_fields') else field_name
+    
+                # Create a new node for the field with color formatting
+                field_display = f"{RESET}{field_name_formatted}{RESET}: {BLUE}{field_type.__name__ if hasattr(field_type, '__name__') else field_type}{RESET}"
+                if field_description:
+                    field_display += f'{SILVER} / {field_description}{RESET}'
+    
+                child_node = Node(field_display, parent=node)
+    
+                # If the field is another Pydantic model, recurse
+                if hasattr(field_type, "model_fields"):
+                    build_tree_from_type(child_node, field_type)
+    
+        def build_tree_from_instance(node: Node, model_instance: BaseModel) -> None:
+            for field_name, field_value in model_instance.__dict__.items():
+                # Get the field info and type from the model
+                field_info = model_instance.__class__.model_fields.get(field_name)
+                field_type = field_info.annotation if field_info else type(field_value)
+                field_description = field_info.description if field_info and hasattr(field_info, 'description') else ""
+                field_name_formatted = field_name.upper() if hasattr(field_type, 'model_fields') else field_name
+    
+                # Format the display text for the field
+                field_display = (
+                    f"{RESET}{field_name_formatted}{RESET}: {BLUE}{field_type.__name__ if hasattr(field_type, '__name__') else field_type}{RESET}"
+                )
+                if field_description:
+                    field_display += f'{SILVER} / {field_description}{RESET}'
+    
+                # Append the value for leaf nodes
+                if not hasattr(field_value, '__dict__') and not isinstance(field_value, list):
+                    field_display += f" = {GREEN}{field_value}{RESET}"
+    
+                child_node = Node(field_display, parent=node)
+    
+                # Recurse for nested Pydantic models
+                if isinstance(field_value, BaseModel):
+                    build_tree_from_instance(child_node, field_value)
+                # Handle lists of nested models or dicts
+                elif isinstance(field_value, list):
+                    for i, item in enumerate(field_value):
+                        item_display = f"{RESET}[{i}]{RESET}"
+                        if isinstance(item, BaseModel):
+                            item_node = Node(item_display, parent=child_node)
+                            build_tree_from_instance(item_node, item)
+                        else:
+                            item_display += f" = {GREEN}{item}{RESET}"
+                            Node(item_display, parent=child_node)
+                # Handle dictionaries
+                elif isinstance(field_value, dict):
+                    for key, value in field_value.items():
+                        key_display = f"{RESET}{key}{RESET}: {GREEN}{value}{RESET}"
+                        Node(key_display, parent=child_node)
+    
+        # Determine if input is a type or an instance
+        root = Node(name.upper())
+        if isinstance(instance_or_type, BaseModel):
+            build_tree_from_instance(root, instance_or_type)
+        elif isinstance(instance_or_type, type) and issubclass(instance_or_type, BaseModel):
+            build_tree_from_type(root, instance_or_type)
+        else:
+            raise TypeError("Input must be a Pydantic BaseModel instance or type.")
+    
+        # Render the tree
+        for pre, fill, node in RenderTree(root):
+            print(f"{pre}{node.name}")
