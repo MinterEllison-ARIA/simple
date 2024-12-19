@@ -15,7 +15,8 @@ dependencies = [
     "json_repair",
     "pandas",
     "jinja2",
-    "pydantic"
+    "pydantic",
+    "anytree",
 ]
 
 [project.license]
